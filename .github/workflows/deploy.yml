@@ -11,7 +11,7 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build, Push & Deploy Frontend
+    name: Build, Push & Deploy Frontend (No ALB)
     runs-on: ubuntu-latest
 
     steps:
@@ -42,10 +42,9 @@ jobs:
           docker push $REGISTRY/${{ env.ECR_REPO }}:latest
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
-      - name: Deploy to Web EC2 via SSM
+      - name: Deploy to EC2 via SSM (No ALB)
         env:
           FRONTEND_IMAGE: ${{ steps.build.outputs.image }}
-          ALB_DNS:        ${{ secrets.ALB_DNS_NAME }}
         run: |
           aws ssm send-command \
             --region ${{ env.AWS_REGION }} \
@@ -53,21 +52,17 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "Deploy ua-frontend ${{ github.sha }}" \
             --parameters 'commands=[
-              "aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $(echo '"$FRONTEND_IMAGE"' | cut -d/ -f1)",
+              "aws ecr get-login-password --region '${{ env.AWS_REGION }}' | docker login --username AWS --password-stdin $(echo '"$FRONTEND_IMAGE"' | cut -d/ -f1)",
               "docker pull '"$FRONTEND_IMAGE"'",
               "docker stop ua-frontend || true",
               "docker rm   ua-frontend || true",
-              "docker run -d --name ua-frontend --restart unless-stopped -p 3000:3000 -e NODE_ENV=production -e APP_API_URL=http://'"$ALB_DNS"' '"$FRONTEND_IMAGE"'",
+              "docker run -d --name ua-frontend --restart unless-stopped -p 3000:3000 -e NODE_ENV=production '"$FRONTEND_IMAGE"'",
               "echo Frontend deployed successfully"
             ]' \
             --output text
 
-      - name: Wait and verify health
+      - name: Basic wait (no target group)
         run: |
-          echo "Waiting 30s for container to start..."
-          sleep 30
-          aws elbv2 describe-target-health \
-            --region ${{ env.AWS_REGION }} \
-            --target-group-arn ${{ secrets.WEB_TARGET_GROUP_ARN }} \
-            --query 'TargetHealthDescriptions[*].{ID:Target.Id,State:TargetHealth.State}' \
-            --output table
+          echo "Waiting 20 seconds for container..."
+          sleep 20
+          echo "Deployment completed — no ALB/TG checks required."
