@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Underwriting Agent — Frontend
 
 React SPA for the Axis Underwriting Agent.
@@ -48,3 +49,7 @@ docker run -p 3000:3000 -e APP_API_URL=http://ua-backend:10000 ua-frontend
 |---|---|
 | VITE_API_URL | Backend URL (used during `npm run dev`) |
 | APP_API_URL | Backend URL used by the Express proxy (Docker/production) |
+=======
+# Underwriting-Agent-Frontend
+Frontend Source code for Application
+>>>>>>> d6419dd0a6461850d57fd725dffd2721156964c7
