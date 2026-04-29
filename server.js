@@ -6,14 +6,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const APP_API_URL = process.env.APP_API_URL || 'http://localhost:10000';
 
-// Proxy all /api/* requests to the backend
+// Proxy API requests
 app.use('/api', createProxyMiddleware({ target: APP_API_URL, changeOrigin: true }));
 
-// Serve built React app
+// Serve React build
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// FIX: use "/*" instead of "*"
-app.get('/*', (_req, res) => {
+// Fallback for SPA routing
+app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
