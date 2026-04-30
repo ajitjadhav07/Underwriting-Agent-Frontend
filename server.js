@@ -12,8 +12,8 @@ app.use('/api', createProxyMiddleware({ target: APP_API_URL, changeOrigin: true 
 // Serve React build
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Fallback for SPA routing
-app.get('*', (_req, res) => {
+// Fallback for SPA routing (Fix applied)
+app.get('/*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
