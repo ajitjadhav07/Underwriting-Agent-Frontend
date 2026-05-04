@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION:   ap-south-1
-  ECR_REPO:     underwriting-agent-frontend
+  AWS_REGION: ap-south-1
+  ECR_REPO: underwriting-agent-frontend
 
 jobs:
   build-and-deploy:
@@ -29,17 +29,21 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & push image
+      - name: Build & Push ONLY `latest`
         id: build
         env:
-          REGISTRY:  ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          IMAGE=$REGISTRY/${{ env.ECR_REPO }}:$IMAGE_TAG
+          IMAGE=$REGISTRY/${{ env.ECR_REPO }}:latest
+          echo "IMAGE=$IMAGE"
+
+          # Build
           docker build -t $IMAGE .
+
+          # Push
           docker push $IMAGE
-          docker tag $IMAGE $REGISTRY/${{ env.ECR_REPO }}:latest
-          docker push $REGISTRY/${{ env.ECR_REPO }}:latest
+
+          # Output the image for deployment
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
       - name: Deploy to EC2 via SSM (No ALB)
@@ -50,12 +54,12 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --instance-ids ${{ secrets.WEB_EC2_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy ua-frontend ${{ github.sha }}" \
+            --comment "Deploy ua-frontend latest" \
             --parameters 'commands=[
               "aws ecr get-login-password --region '${{ env.AWS_REGION }}' | docker login --username AWS --password-stdin $(echo '"$FRONTEND_IMAGE"' | cut -d/ -f1)",
               "docker pull '"$FRONTEND_IMAGE"'",
               "docker stop ua-frontend || true",
-              "docker rm   ua-frontend || true",
+              "docker rm ua-frontend || true",
               "docker run -d --name ua-frontend --restart unless-stopped -p 3000:3000 -e NODE_ENV=production '"$FRONTEND_IMAGE"'",
               "echo Frontend deployed successfully"
             ]' \
